@@ -4,6 +4,10 @@ import android.accounts.Account;
 import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Bundle;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
+import android.util.Log;
 
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.ActivityEventListener;
@@ -107,14 +111,34 @@ public class RNGoogleSigninModule extends ReactContextBaseJavaModule implements 
             return;
         }
 
+        Log.d("RNSIGN", "Connecting..");
         activity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 _apiClient = new GoogleApiClient.Builder(activity.getBaseContext())
                         .addApi(Auth.GOOGLE_SIGN_IN_API, getSignInOptions(scopes, webClientId, offlineAccess))
                         .build();
+                _apiClient.registerConnectionCallbacks(new GoogleApiClient.ConnectionCallbacks() {
+                    @Override
+                    public void onConnected(@Nullable Bundle bundle) {
+                        Log.d("RNSIGN", "onConnected");
+                        promise.resolve(null);
+                    }
+
+                    @Override
+                    public void onConnectionSuspended(int i) {
+                        Log.d("RNSIGN", "onConnectionSuspended");
+
+                    }
+                });
+                _apiClient.registerConnectionFailedListener(new GoogleApiClient.OnConnectionFailedListener() {
+                    @Override
+                    public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
+                        Log.d("RNSIGN", "onConnectionFailed " + connectionResult);
+                        promise.reject(String.valueOf(connectionResult.getErrorCode()), connectionResult.getErrorMessage());
+                    }
+                });
                 _apiClient.connect();
-                promise.resolve(true);
             }
         });
     }
